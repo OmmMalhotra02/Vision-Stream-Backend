@@ -1,6 +1,6 @@
 //APPROACH 2 - DB connection in another file
 
-import mongoose, { connect } from 'mongoose'
+import mongoose from 'mongoose'
 import { DB_NAME } from '../constants.js'
 
 const connectDB = async () => {
