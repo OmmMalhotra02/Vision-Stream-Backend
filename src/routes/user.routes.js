@@ -7,10 +7,10 @@ const router = Router()
 // file acceptance from frontend req
 
 router.route("/register").post(
-    upload.fields(
+    upload.fields([
         { name: "avatar", maxCount: 1 }, 
         { name: "coverImage", maxCount: 1 }
-    ),
+    ]),
     registerUser
 )
 
