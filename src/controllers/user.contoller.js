@@ -4,6 +4,7 @@ import { User } from "../models/user.models.js";
 import { deleteOldImage, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from 'jsonwebtoken'
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshTokens = async (user) => {
     try {
@@ -240,7 +241,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             .json(
                 new ApiResponse(
                     200,
-                    { accessToken, refreshToken},
+                    { accessToken, refreshToken },
                     "Access Token refreshed"
                 )
             )
@@ -256,67 +257,67 @@ const changeCurrentUserPassword = asyncHandler(async (req, res) => {
     // encrypt it and save it to the User
     // update the user in db with new password
 
-    const {oldPassword, newPassword} = req.body
+    const { oldPassword, newPassword } = req.body
 
-    if(!oldPassword || !newPassword) {
+    if (!oldPassword || !newPassword) {
         throw new ApiError(400, "old or new password is null or missing")
     }
 
     const user = await User.findById(req?.user?._id)
     const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
 
-    if(!isPasswordCorrect) {
+    if (!isPasswordCorrect) {
         throw new ApiError(400, "Invalid Current password")
     }
 
     user.password = newPassword
-    await user.save({validateBeforeSave: false})
+    await user.save({ validateBeforeSave: false })
 
     return res.
-    status(200).
-    json(
-        new ApiResponse(200, user, "User password updated")
-    )
+        status(200).
+        json(
+            new ApiResponse(200, user, "User password updated")
+        )
 })
 
 const getCurrentUser = asyncHandler(async (req, res) => {
     return res.
-    status(200).
-    json(new ApiResponse(200, req.user, "Current User fetched"))
+        status(200).
+        json(new ApiResponse(200, req.user, "Current User fetched"))
 })
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
-    const {username, email, fullName} = req.body
+    const { username, email, fullName } = req.body
 
-    if(!username || !email || !fullName) {
+    if (!username || !email || !fullName) {
         throw new ApiError(400, "All fields are required")
     }
 
     const updatedUser = await User.findByIdAndUpdate(
-        req?._id, 
+        req?._id,
         {
-            $set: {username, email, fullName}
-        }, 
-        {new: true} //info after update will be returned
+            $set: { username, email, fullName }
+        },
+        { new: true } //info after update will be returned
     ).select("-password")
 
     return res.
-    status(200).
-    json(
-        new ApiResponse(200, updatedUser, "User details updated successfully")
-    )
+        status(200).
+        json(
+            new ApiResponse(200, updatedUser, "User details updated successfully")
+        )
 })
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
     const updatedAvatarLocalPath = req.file?.path
 
-    if(!updatedAvatarLocalPath) {
+    if (!updatedAvatarLocalPath) {
         throw new ApiError(400, "Avatar file is missing")
     }
 
     const avatar = await uploadOnCloudinary(updatedAvatarLocalPath)
 
-    if(!avatar.url) {
+    if (!avatar.url) {
         throw new ApiError(400, "Error while uploading the updated avatar on cloudinary")
     }
 
@@ -347,22 +348,22 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     // ).select("-password")
 
     return res.
-    status(200).
-    json(
-        new ApiResponse(200, updatedUser, "Avatar updated")
-    )
+        status(200).
+        json(
+            new ApiResponse(200, updatedUser, "Avatar updated")
+        )
 })
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
     const updatedCoverImageLocalPath = req.file?.path
 
-    if(!updatedCoverImageLocalPath) {
+    if (!updatedCoverImageLocalPath) {
         throw new ApiError(400, "Cover image file missing")
     }
 
     const coverImage = await uploadOnCloudinary(updatedCoverImageLocalPath)
 
-    if(!coverImage.url) {
+    if (!coverImage.url) {
         throw new ApiError(400, "Error while uploading the updated cover Image on cloudinary")
     }
 
@@ -373,20 +374,20 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
                 coverImage: coverImage.url
             }
         },
-        {new: true}
+        { new: true }
     ).select("-password")
 
     return res.
-    status(200).
-    json(
-        new ApiResponse(200, user, "cover Image updated")
-    )
+        status(200).
+        json(
+            new ApiResponse(200, user, "cover Image updated")
+        )
 })
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-    const {username} = req.params
+    const { username } = req.params
 
-    if(!username.trim()) {
+    if (!username.trim()) {
         throw new ApiError(400, "Username is missing")
     }
 
@@ -422,7 +423,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 },
                 isSubscribed: {
                     $cond: {
-                        $if: {$in: [req.user?._id, "$listOfSubscribers.subcriber"]},
+                        $if: { $in: [req.user?._id, "$listOfSubscribers.subcriber"] },
                         $then: true,
                         $else: false
                     }
@@ -444,32 +445,87 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     ])
 
     console.log("ChannelProfile", channelProfile);
-    
 
-    if(!channelProfile?.length) {
+
+    if (!channelProfile?.length) {
         throw new ApiError(404, "Channel doesn't exists")
     }
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                channelProfile[0],
+                "User Channel fetched successfully"
+            )
+        )
+})
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+    const user = await User.aggregate([
+        {
+            $match: {
+                _id: mongoose.Types.ObjectId(req.user?._id)
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "videos",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields: {
+                            owner: {
+                                $first: "$owner"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ])
 
     return res
     .status(200)
     .json(
         new ApiResponse(
             200,
-            channelProfile[0],
-            "User Channel fetched successfully"
+            user[0].watchhistory,
+            "Watch history fetched successfully"
         )
     )
 })
 
-export { 
-    registerUser, 
-    loginUser, 
-    logoutUser, 
-    refreshAccessToken, 
-    changeCurrentUserPassword, 
-    getCurrentUser, 
-    updateAccountDetails, 
-    updateUserAvatar, 
+export {
+    registerUser,
+    loginUser,
+    logoutUser,
+    refreshAccessToken,
+    changeCurrentUserPassword,
+    getCurrentUser,
+    updateAccountDetails,
+    updateUserAvatar,
     updateUserCoverImage,
-    getUserChannelProfile
+    getUserChannelProfile,
+    getWatchHistory
 }
