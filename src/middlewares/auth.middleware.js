@@ -11,7 +11,7 @@ So that controller has the access fo verified user in request part itself*/
 export const verifyJWT = asyncHandler(async(req, _, next) => {
 
     try {
-        const token = req.cookies?.accessToken || req.header("Authorization")?.replce("Bearer ", "")
+        const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
     
         if(!token) {
             throw new ApiError(401, "Unauthorized request")
