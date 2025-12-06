@@ -1,7 +1,7 @@
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.models.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { deleteOldImage, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from 'jsonwebtoken'
 
@@ -320,22 +320,36 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Error while uploading the updated avatar on cloudinary")
     }
 
-    const user = await User.findByIdAndUpdate(
-        req.user?._id, 
-        {
-            $set: {
-                avatar: avatar.url
-            }
-        },
-        {
-            new: true
-        }
-    ).select("-password")
+    const user = await User.findById(req.user?._id).select("-password");
+
+    const oldAvatar = user.avatar.url
+
+    const result = deleteOldImage(oldAvatar)
+
+    if (!result) {
+        throw new ApiError(400, "Avatar file deletion failed")
+    }
+
+    user.avatar.url = avatar.url;
+
+    const updatedUser = await user.save()
+
+    // const user = await User.findByIdAndUpdate(
+    //     req.user?._id, 
+    //     {
+    //         $set: {
+    //             avatar: avatar.url
+    //         }
+    //     },
+    //     {
+    //         new: true
+    //     }
+    // ).select("-password")
 
     return res.
     status(200).
     json(
-        new ApiResponse(200, user, "Avatar updated")
+        new ApiResponse(200, updatedUser, "Avatar updated")
     )
 })
 

@@ -21,4 +21,21 @@ const uploadOnCloudinary = async (localFilePath) => {
     }
 }
 
-export {uploadOnCloudinary}
+const deleteOldImage = async (imagePath) => {
+    try {
+        const result = await cloudinary.uploader.destroy(imagePath)
+        console.log('Deletion result:', result);
+        if (result.result === 'ok') {
+            console.log(`Image with public ID ${imagePath} deleted successfully.`);
+            return true;
+        } else {
+            console.error(`Failed to delete image with public ID ${imagePath}. Result:`, result.result);
+            return false;
+        }
+    } catch (error) {
+        console.log("Avatar deletion failed", error);
+        return false;
+    }
+}
+
+export {uploadOnCloudinary, deleteOldImage}
