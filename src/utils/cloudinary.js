@@ -8,7 +8,7 @@ const uploadOnCloudinary = async (localFilePath) => {
 
         // console.log("response on uploading file in cloudinary ", response);
         
-        console.log("File uploaded on cloudinary ", response.url);
+        // console.log("File uploaded on cloudinary ", response.url);
         return response;
 
     } catch (error) {
@@ -23,7 +23,13 @@ const uploadOnCloudinary = async (localFilePath) => {
 
 const deleteOldImage = async (imagePath) => {
     try {
-        const result = await cloudinary.uploader.destroy(imagePath)
+        //get Public ID from URL
+        const parts = imagePath.split('/');
+        const filename = parts[parts.length - 1]; 
+        const publicId = filename.split('.')[0];
+        // console.log(publicId);
+
+        const result = await cloudinary.uploader.destroy(publicId)
         console.log('Deletion result:', result);
         if (result.result === 'ok') {
             console.log(`Image with public ID ${imagePath} deleted successfully.`);

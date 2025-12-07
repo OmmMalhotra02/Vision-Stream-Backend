@@ -34,7 +34,7 @@ router.route('/logout').post(verifyJWT, logoutUser)
 
 router.route('/refresh-access').post(refreshAccessToken)
 
-router.route('/change-password').patch(verifyJWT, changeCurrentUserPassword)
+router.route('/change-password').post(verifyJWT, changeCurrentUserPassword)
 
 router.route('/user-details').get(verifyJWT, getCurrentUser)
 
@@ -42,11 +42,12 @@ router.route('/update-acoount-details').patch(verifyJWT, updateAccountDetails)
 
 router.route('/update-avatar').patch(
     verifyJWT,
-    upload.single ("avatar"),
+    upload.single("avatar"),
     updateUserAvatar
 )
 
 router.route('/update-cover-image').patch(
+    verifyJWT,
     upload.fields("coverImage"),
     updateUserCoverImage
 )

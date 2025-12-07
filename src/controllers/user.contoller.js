@@ -183,8 +183,8 @@ const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1
             }
         },
         {
@@ -215,7 +215,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     try {
         const decodedRefreshToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET)
 
-        console.log("Decoded refresh toke is ", decodedRefreshToken);
+        // console.log("Decoded refresh toke is ", decodedRefreshToken);
 
         const user = await User.findById(decodedRefreshToken?._id)
 
@@ -263,8 +263,9 @@ const changeCurrentUserPassword = asyncHandler(async (req, res) => {
         throw new ApiError(400, "old or new password is null or missing")
     }
 
-    const user = await User.findById(req?.user?._id)
-    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+    const user = await User.findById(req.user?._id)    
+
+    const isPasswordCorrect = await user?.isPasswordCorrect(oldPassword)
 
     if (!isPasswordCorrect) {
         throw new ApiError(400, "Invalid Current password")
@@ -294,7 +295,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     }
 
     const updatedUser = await User.findByIdAndUpdate(
-        req?._id,
+        req.user?._id,
         {
             $set: { username, email, fullName }
         },
@@ -322,8 +323,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     }
 
     const user = await User.findById(req.user?._id).select("-password");
-
-    const oldAvatar = user.avatar.url
+    // console.log(user?.avatar);
+    
+    const oldAvatar = user?.avatar
 
     const result = deleteOldImage(oldAvatar)
 
@@ -331,7 +333,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Avatar file deletion failed")
     }
 
-    user.avatar.url = avatar.url;
+    user.avatar = avatar.url;
 
     const updatedUser = await user.save()
 
@@ -387,7 +389,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 const getUserChannelProfile = asyncHandler(async (req, res) => {
     const { username } = req.params
 
-    if (!username.trim()) {
+    if (!username || !username.trim()) {
         throw new ApiError(400, "Username is missing")
     }
 
@@ -423,9 +425,9 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 },
                 isSubscribed: {
                     $cond: {
-                        $if: { $in: [req.user?._id, "$listOfSubscribers.subcriber"] },
-                        $then: true,
-                        $else: false
+                        if: { $in: [req.user?._id, "$listOfSubscribers.subscriber"] },
+                        then: true,
+                        else: false
                     }
                 }
             }
