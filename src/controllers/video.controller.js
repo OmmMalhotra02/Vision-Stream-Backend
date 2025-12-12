@@ -7,7 +7,7 @@ import { asyncHandler } from "../utils/asyncHandler.js"
 import { deleteOldAsset, uploadOnCloudinary } from "../utils/cloudinary.js"
 
 
-const getAllVideos = asyncHandler(async (req, res) => {
+const getAllUserVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType } = req.query
     //TODO: get all videos based on query, sort, pagination
 
@@ -74,6 +74,69 @@ const getAllVideos = asyncHandler(async (req, res) => {
         )
 })
 
+const getAllVideos = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10, query, sortBy, sortType } = req.query
+    //TODO: get all videos based on query, sort, pagination
+
+    const userId = req.user?._id
+
+    if (!userId) {
+        throw new ApiError(400, "User Id not recieved")
+    }
+
+
+    // const ownerId = new mongoose.Types.ObjectId(userId)
+
+    const videos = await Video.aggregate([
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "ownerUser"
+            }
+        },
+        {
+            $unwind: "$ownerUser"
+        },
+        {
+            $project: {
+                title: 1,
+                thumbnail: 1,
+                videoFile: 1,
+                views: 1,
+                createdAt: 1,
+                "ownerUser.username": 1,
+                "ownerUser.fullName": 1,
+                "ownerUser.avatar": 1
+            }
+        },
+        {
+            $sort: {
+                [sortBy || "createdAt"]: sortType === "asc" ? 1 : -1
+            }
+        },
+        {
+            $skip: (page - 1) * limit
+        },
+        {
+            $limit: parseInt(limit)
+        }
+    ])
+
+    // console.log(videos);
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                videos,
+                "All videos fetched successfully"
+            )
+        )
+})
+
 const publishAVideo = asyncHandler(async (req, res) => {
     const { title, description } = req.body
     // TODO: get video, upload to cloudinary, create video
@@ -84,7 +147,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
     const currentUser = req.user?._id
 
-    console.log("req.files:", req.files);
+    // console.log("req.files:", req.files);
 
     const videoFileLocalPath = req.files?.videoFile[0]?.path
     const thumbnailLocalPath = req.files?.thumbnail[0]?.path
@@ -217,7 +280,7 @@ const deleteVideo = asyncHandler(async (req, res) => {
         throw new ApiError(403, "You are not allowed to delete this video");
     }
 
-    console.log(video);
+    // console.log(video);
 
     await Video.deleteOne({ _id: videoId });
 
@@ -266,6 +329,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 })
 
 export {
+    getAllUserVideos,
     getAllVideos,
     publishAVideo,
     getVideoById,
