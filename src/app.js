@@ -4,10 +4,23 @@ import cookieParser from 'cookie-parser'
 
 const app = express()
 
+const allowedOrigins = [
+  'https://vision-stream.vercel.app', // production frontend
+  /http:\/\/localhost:\d+/    // local dev            
+];
+
 app.use(cors({
-    origin: process.env.CORS_ORIGIN,
-    credentials: true
-}))
+  origin: function(origin, callback){
+    if(!origin) return callback(null, true); // allow Postman or curl
+    const allowed = allowedOrigins.some(o => {
+      if(o instanceof RegExp) return o.test(origin);
+      return o === origin;
+    });
+    if(!allowed) return callback(new Error('CORS not allowed from this origin'), false);
+    return callback(null, true);
+  },
+  credentials: true
+}));
 
 app.use(express.json({limit: "16kb"}))
 
