@@ -4,28 +4,28 @@ import cookieParser from 'cookie-parser'
 
 const app = express()
 
-// const allowedOrigins = [
-//   "https://vision-stream.vercel.app",
-//   "http://localhost:5173",
-//   "http://localhost:5174"
-// ];
+const allowedOrigins = [
+  "https://vision-stream.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:5174"
+];
 
-// const corsOptions = {
-//   origin: function (origin, callback) {
-//     // allow requests with no origin (like mobile apps, Postman)
-//     if (!origin) return callback(null, true);
-//     if (allowedOrigins.indexOf(origin) === -1) {
-//       const msg = "The CORS policy for this site does not allow access from the specified Origin.";
-//       return callback(new Error(msg), false);
-//     }
-//     return callback(null, true);
-//   },
-//   credentials: true,
-//   methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
-//   allowedHeaders: ["Content-Type","Authorization"],
-// };
+const corsOptions = {
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps, Postman)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = "The CORS policy for this site does not allow access from the specified Origin.";
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization"],
+};
 
-app.use(cors());
+app.use(cors(corsOptions));
 // app.options("*", cors(corsOptions));
 
 app.use((req, res, next) => { 
