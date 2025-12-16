@@ -4,16 +4,19 @@ import cookieParser from 'cookie-parser'
 
 const app = express()
 
-app.use(cors({
+const corsOptions = {
   origin: [
-    "https://vision-stream.vercel.app",
+    "https://vision-stream-backend.vercel.app",
     "http://localhost:5173",
     "http://localhost:5174"
   ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-}));
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 app.use((req, res, next) => {
   res.setHeader("Vary", "Origin");
@@ -27,8 +30,6 @@ app.use(express.urlencoded({extended: true, limit: "16kb"}))
 app.use(express.static("public"))
 
 app.use(cookieParser())
-
-app.options("*", cors());
 
 //routes import
 import userRouter from './routes/user.routes.js'
