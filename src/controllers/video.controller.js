@@ -89,6 +89,11 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
     const videos = await Video.aggregate([
         {
+            $match: {
+                isPublished: {$ne: false}
+            }
+        },
+        {
             $lookup: {
                 from: "users",
                 localField: "owner",
@@ -106,6 +111,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
                 videoFile: 1,
                 views: 1,
                 createdAt: 1,
+                isPublished: 1,
                 "ownerUser.username": 1,
                 "ownerUser.fullName": 1,
                 "ownerUser.avatar": 1
@@ -138,7 +144,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
-    const { title, description } = req.body
+    const { title, description, isPublished } = req.body
     // TODO: get video, upload to cloudinary, create video
 
     if (!title || !description) {
@@ -171,8 +177,10 @@ const publishAVideo = asyncHandler(async (req, res) => {
         owner: currentUser,
         title,
         description,
-        duration: videoFile.duration
+        duration: videoFile.duration,
+        isPublished: isPublished || false
     })
+    
 
     return res
         .status(200)
@@ -301,19 +309,20 @@ const updateVideo = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Video Id not received")
     }
 
-    // if (!title || !description) {
-    //     throw new ApiError(401, "Title or Description missing")
-    // }
-
-    // console.log(req.file);
-    const thumbnailPath = req.file?.path
-
-
-    if (!thumbnailPath) {
-        throw new ApiError(501, "thumbnail path not found on multer")
+    if (!title || !description) {
+        throw new ApiError(401, "Title or Description missing")
     }
 
-    const uploadedThumbnail = await uploadOnCloudinary(thumbnailPath)
+    const videoFileLocalPath = req.files?.videoFile[0]?.buffer
+    const thumbnailLocalPath = req.files?.thumbnail[0]?.buffer
+
+
+    if (!videoFileLocalPath || !thumbnailLocalPath) {
+        throw new ApiError(501, "Video file or thumbnail not found on multer")
+    }
+
+    const uploadedThumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+    const uploadedVideo = await uploadOnCloudinary(videoFileLocalPath)
 
     if (!uploadedThumbnail?.url) {
         throw new ApiError(500, "Thumbnail upload to Cloudinary failed");
@@ -325,6 +334,7 @@ const updateVideo = asyncHandler(async (req, res) => {
             $set: {
                 title,
                 description,
+                videoFile: uploadedVideo.url,
                 thumbnail: uploadedThumbnail.url
             }
         },
