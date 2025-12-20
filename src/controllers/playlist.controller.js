@@ -40,16 +40,21 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid user ID");
     }
 
-    const playlists = await Playlist.find({ owner: userId })
+    const playlists = await Playlist.find({ owner: new mongoose.Types.ObjectId(userId) })
 
     if (!playlists || playlists.length === 0) {
-        throw new ApiError(404, "Playlist not found");
+        return new ApiResponse(404, playlists, "No playlists found");
     }
 
     return res
         .status(200)
         .json(
-            new ApiResponse(200, playlists, "User playlists fetched successfully")
+            new ApiResponse(
+                200,
+                playlists,
+                playlists.length
+                    ? "User playlists fetched successfully"
+                    : "No playlists found")
         );
 })
 
@@ -61,7 +66,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     }
 
     // const playlist = await Playlist.findById(playlistId).populate("videos")
-        const playlist = await Playlist.findById(playlistId)
+    const playlist = await Playlist.findById(playlistId)
 
 
     if (!playlist) {
@@ -73,6 +78,20 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, playlist, "Playlist fetched successfully"));
 })
 
+const getAllPlaylist = asyncHandler(async (req, res) => {
+    const allPlaylists = await Playlist.find({})
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            allPlaylists,
+            "All playlists fetched"
+        )
+    )
+})
+
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
     const { playlistId, videoId } = req.params
 
@@ -82,7 +101,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
 
     const playlist = await Playlist.findById(playlistId)
 
-    if (req.user?._id != playlist.owner) {
+    if (!playlist.owner.equals(req.user?._id)) {
         throw new ApiError(400, "Only Owner is allowed to edit their playlist")
     }
 
@@ -130,7 +149,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
 
     const playlist = await Playlist.findById(playlistId)
 
-    if (req.user._id != playlist.owner) {
+    if (!playlist.owner.equals(req.user._id)) {
         throw new ApiError(400, "Only Owner is allowed to edit their playlist")
     }
 
@@ -168,7 +187,7 @@ const deletePlaylist = asyncHandler(async (req, res) => {
     }
 
     const playlist = await Playlist.findById(playlistId)
-    if (req.user._id != playlist.owner) {
+    if (!playlist.owner.equals(req.user._id)) {
         throw new ApiError(400, "Only Owner is allowed to edit their playlist")
     }
 
@@ -233,5 +252,6 @@ export {
     addVideoToPlaylist,
     removeVideoFromPlaylist,
     deletePlaylist,
-    updatePlaylist
+    updatePlaylist,
+    getAllPlaylist
 }
